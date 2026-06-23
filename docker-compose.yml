@@ -1,0 +1,90 @@
+
+# ── Stack independiente de Aseguradora ProSalud ───────────────────────────────
+# Levanta aparte de MediCitas: docker compose up --build
+# Puertos distintos para no colisionar con MediCitas (3310, 5672, 15672)
+
+services:
+
+  # ── API Aseguradora ──────────────────────────────────────────────────────────
+  aseguradora-api:
+    build: .
+    container_name: aseguradora_prosalud_api
+    restart: unless-stopped
+    ports:
+      - "4001:4001"
+    env_file: .env
+    environment:
+      NODE_ENV:                     ${NODE_ENV:-development}
+      PORT:                         4001
+      DB_HOST:                      mysql-aseguradora
+      DB_PORT:                      3306
+      DB_USER:                      ${DB_USER:-aseguradora_app}
+      DB_PASSWORD:                  ${DB_PASSWORD:-app_secret_aseguradora}
+      DB_NAME:                      db_aseguradora
+      RABBITMQ_URL:                 amqp://${RABBITMQ_USER:-aseguradora_rabbit_user}:${RABBITMQ_PASSWORD:-rabbit_secret_aseguradora}@rabbitmq-aseguradora:5672
+      ASEGURADORA_API_KEY:          ${ASEGURADORA_API_KEY:-prosalud_secret_key_2026}
+      MAX_SOLICITUDES_CONCURRENTES: ${MAX_SOLICITUDES_CONCURRENTES:-50}
+    depends_on:
+      mysql-aseguradora:
+        condition: service_healthy
+      rabbitmq-aseguradora:
+        condition: service_healthy
+    networks:
+      - aseguradora_net
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:4001/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── MySQL (db_aseguradora) ───────────────────────────────────────────────────
+  mysql-aseguradora:
+    image: mysql:8.0
+    container_name: aseguradora_mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root_secret_aseguradora}
+      MYSQL_DATABASE:      db_aseguradora
+      MYSQL_USER:          ${DB_USER:-aseguradora_app}
+      MYSQL_PASSWORD:      ${DB_PASSWORD:-app_secret_aseguradora}
+    ports:
+      - "3311:3306"      # Puerto diferente al de MediCitas (3310)
+    volumes:
+      - aseguradora_mysql_data:/var/lib/mysql
+      - ./sql:/docker-entrypoint-initdb.d   # 01_schema.sql y 02_seed.sql se cargan en orden
+    networks:
+      - aseguradora_net
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD:-root_secret_aseguradora}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  # ── RabbitMQ (broker propio de Seguros) ──────────────────────────────────────
+  rabbitmq-aseguradora:
+    image: rabbitmq:3-management-alpine
+    container_name: aseguradora_rabbitmq
+    restart: unless-stopped
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-aseguradora_rabbit_user}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-rabbit_secret_aseguradora}
+    ports:
+      - "5673:5672"      # Puerto diferente al de MediCitas (5672)
+      - "15673:15672"    # Management UI diferente al de MediCitas (15672)
+    volumes:
+      - aseguradora_rabbitmq_data:/var/lib/rabbitmq
+    networks:
+      - aseguradora_net
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+
+volumes:
+  aseguradora_mysql_data:
+  aseguradora_rabbitmq_data:
+
+networks:
+  aseguradora_net:
+    driver: bridge

@@ -1,0 +1,41 @@
+{
+  "vhosts": [{ "name": "/" }],
+  "exchanges": [
+    {
+      "name": "aseguradora.events",
+      "type": "topic",
+      "durable": true,
+      "auto_delete": false,
+      "internal": false,
+      "vhost": "/"
+    }
+  ],
+  "queues": [
+    {
+      "name": "q.aseguradora.auditoria",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-dead-letter-exchange": "",
+        "x-dead-letter-routing-key": "q.aseguradora.auditoria.dlq"
+      },
+      "vhost": "/"
+    },
+    {
+      "name": "q.aseguradora.auditoria.dlq",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {},
+      "vhost": "/"
+    }
+  ],
+  "bindings": [
+    {
+      "source": "aseguradora.events",
+      "destination": "q.aseguradora.auditoria",
+      "destination_type": "queue",
+      "routing_key": "#",
+      "vhost": "/"
+    }
+  ]
+}
