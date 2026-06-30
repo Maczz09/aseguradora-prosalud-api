@@ -6,6 +6,7 @@ const backpressureMiddleware = require('../middleware/backpressure.middleware');
 const apiKeyMiddleware       = require('../middleware/apiKey.middleware');
 const AseguradosController   = require('../controllers/AseguradosController');
 const ValidacionService      = require('../services/ValidacionService');
+const RegistroService        = require('../services/RegistroService');
 const AseguradosRepository   = require('../repositories/AseguradosRepository');
 const OutboxRepository       = require('../repositories/OutboxRepository');
 
@@ -13,7 +14,8 @@ const OutboxRepository       = require('../repositories/OutboxRepository');
 const aseguradosRepo    = new AseguradosRepository();
 const outboxRepo        = new OutboxRepository();
 const validacionService = new ValidacionService(aseguradosRepo, outboxRepo);
-const controller        = new AseguradosController(validacionService);
+const registroService   = new RegistroService(aseguradosRepo);
+const controller        = new AseguradosController(validacionService, registroService);
 
 const router = express.Router();
 
@@ -143,6 +145,64 @@ router.get(
   backpressureMiddleware,
   apiKeyMiddleware,
   controller.validar,
+);
+
+/**
+ * @swagger
+ * /asegurados:
+ *   post:
+ *     summary: Registra un nuevo asegurado con su póliza y porcentaje de cobertura
+ *     description: |
+ *       Crea de forma atómica (transacción) un asegurado y su póliza asociada.
+ *
+ *       Campos obligatorios: `nombre`, `apellido`, `tipoDocumento`,
+ *       `numeroDocumento` y `porcentajeCobertura`. El resto son opcionales:
+ *       - `plan` → por defecto `Plan Estándar`
+ *       - `numeroPoliza` → autogenerado (`POL-<año>-<hex>`) si se omite
+ *       - `fechaInicio` → hoy si se omite
+ *       - `fechaFin` → un año después de `fechaInicio` si se omite
+ *       - `estado` → `VIGENTE` por defecto
+ *
+ *       Tras crearlo, el asegurado puede consultarse en `GET /asegurados/validar`.
+ *     tags: [Asegurados]
+ *     security:
+ *       - ApiKeyAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [nombre, apellido, tipoDocumento, numeroDocumento, porcentajeCobertura]
+ *             properties:
+ *               nombre:              { type: string, example: Juan }
+ *               apellido:            { type: string, example: Pérez Ramos }
+ *               tipoDocumento:       { type: string, enum: [DNI, CE, PASAPORTE], example: DNI }
+ *               numeroDocumento:     { type: string, minLength: 5, maxLength: 20, example: '55667788' }
+ *               porcentajeCobertura: { type: number, minimum: 0, maximum: 100, example: 75 }
+ *               fechaNacimiento:     { type: string, format: date, example: '1990-05-10' }
+ *               plan:                { type: string, example: Plan Salud Plus }
+ *               numeroPoliza:        { type: string, example: POL-2026-010 }
+ *               fechaInicio:         { type: string, format: date, example: '2026-01-01' }
+ *               fechaFin:            { type: string, format: date, example: '2027-12-31' }
+ *               estado:              { type: string, enum: [VIGENTE, VENCIDA, SUSPENDIDA], example: VIGENTE }
+ *     responses:
+ *       201:
+ *         description: Asegurado y póliza creados
+ *       400:
+ *         description: Parámetros inválidos o faltantes
+ *       401:
+ *         description: API Key ausente o incorrecta
+ *       409:
+ *         description: Documento o número de póliza ya existen
+ *       500:
+ *         description: Error interno del servidor
+ */
+router.post(
+  '/',
+  backpressureMiddleware,
+  apiKeyMiddleware,
+  controller.crear,
 );
 
 module.exports = router;

@@ -40,6 +40,57 @@ class AseguradosRepository {
     );
     return rows[0] || null;
   }
+
+  /**
+   * Crea un asegurado junto con su póliza en una sola transacción.
+   * Si cualquiera de los dos INSERT falla, se revierte todo (atomicidad).
+   *
+   * @param {object} asegurado — { id, nombre, apellido, tipoDocumento, numeroDocumento, fechaNacimiento }
+   * @param {object} poliza    — { id, numeroPoliza, plan, porcentajeCobertura, fechaInicio, fechaFin, estado }
+   */
+  async crearAseguradoConPoliza(asegurado, poliza) {
+    const conn = await pool.getConnection();
+    try {
+      await conn.beginTransaction();
+
+      await conn.execute(
+        `INSERT INTO asegurados
+           (id_asegurado, nombre, apellido, tipo_documento, numero_documento, fecha_nacimiento, activo)
+         VALUES (?, ?, ?, ?, ?, ?, 1)`,
+        [
+          asegurado.id,
+          asegurado.nombre,
+          asegurado.apellido,
+          asegurado.tipoDocumento,
+          asegurado.numeroDocumento,
+          asegurado.fechaNacimiento ?? null,
+        ],
+      );
+
+      await conn.execute(
+        `INSERT INTO polizas
+           (id_poliza, id_asegurado, numero_poliza, plan, porcentaje_cobertura, fecha_inicio, fecha_fin, estado)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          poliza.id,
+          asegurado.id,
+          poliza.numeroPoliza,
+          poliza.plan,
+          poliza.porcentajeCobertura,
+          poliza.fechaInicio,
+          poliza.fechaFin,
+          poliza.estado,
+        ],
+      );
+
+      await conn.commit();
+    } catch (err) {
+      await conn.rollback();
+      throw err;
+    } finally {
+      conn.release();
+    }
+  }
 }
 
 module.exports = AseguradosRepository;

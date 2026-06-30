@@ -45,6 +45,43 @@ Una vez que el servidor esté corriendo, puedes visualizar e interactuar con la 
 
 Para probar los endpoints desde Swagger, usa el botón **Authorize** en la parte superior derecha e ingresa la API Key por defecto configurada en tu `.env` (por defecto: `prosalud_secret_key_2026`).
 
+## 🔌 Endpoints
+
+Todos requieren la cabecera `X-Api-Key`.
+
+### `GET /api/v1/asegurados/validar`
+
+Valida si un documento tiene una póliza **vigente**.
+
+- **Query:** `tipoDocumento` (`DNI` | `CE` | `PASAPORTE`), `numeroDocumento`
+- **200:** `{ asegurado: true, numeroPoliza, plan, porcentajeCobertura, vigencia }` — o `{ asegurado: false }` si no existe / vencida / suspendida.
+
+### `POST /api/v1/asegurados`
+
+Registra un nuevo asegurado junto con su póliza (porcentaje de cobertura) de forma **atómica** (transacción).
+
+- **Body obligatorio:** `nombre`, `apellido`, `tipoDocumento`, `numeroDocumento`, `porcentajeCobertura` (0–100).
+- **Body opcional:** `plan` (por defecto `Plan Estándar`), `numeroPoliza` (autogenerado `POL-<año>-<hex>`), `fechaInicio` (hoy), `fechaFin` (+1 año), `estado` (`VIGENTE`), `fechaNacimiento`.
+- **Respuestas:** `201` creado · `400` datos inválidos · `409` documento o póliza duplicados · `401` API Key.
+
+```bash
+curl -X POST http://localhost:4001/api/v1/asegurados \
+  -H "X-Api-Key: prosalud_secret_key_2026" -H "Content-Type: application/json" \
+  -d '{"nombre":"Juan","apellido":"Pérez","tipoDocumento":"DNI","numeroDocumento":"55667788","porcentajeCobertura":75}'
+```
+
+#### Validación del número de documento (según tipo)
+
+El número se valida en el servidor según el tipo de documento:
+
+| Tipo | Regla | Ejemplo |
+| :--- | :--- | :--- |
+| `DNI` | Exactamente **8 dígitos** numéricos | `12345678` |
+| `CE` | **6 a 12** caracteres alfanuméricos | `CE123456` |
+| `PASAPORTE` | **6 a 12** caracteres alfanuméricos | `US9988776` |
+
+Si el formato no coincide, la API responde `400` con un mensaje explicando la regla del tipo enviado.
+
 ## 🧪 Datos de Prueba (Seeding)
 
 La base de datos arranca automáticamente con información precargada. Usa los siguientes datos en el endpoint `GET /api/v1/asegurados/validar` para comprobar los distintos flujos:
