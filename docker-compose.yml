@@ -24,6 +24,8 @@ services:
       RABBITMQ_URL:                 amqp://${RABBITMQ_USER:-aseguradora_rabbit_user}:${RABBITMQ_PASSWORD:-rabbit_secret_aseguradora}@rabbitmq-aseguradora:5672
       ASEGURADORA_API_KEY:          ${ASEGURADORA_API_KEY:-prosalud_secret_key_2026}
       MAX_SOLICITUDES_CONCURRENTES: ${MAX_SOLICITUDES_CONCURRENTES:-50}
+      WEBHOOK_MEDICITAS_URL:        http://medicitas_backend:3000/api/v1/webhooks/seguros
+      API_KEY:                      test-api-key-12345
     depends_on:
       mysql-aseguradora:
         condition: service_healthy
@@ -31,6 +33,7 @@ services:
         condition: service_healthy
     networks:
       - aseguradora_net
+      - medicitas_shared_net
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://localhost:4001/health || exit 1"]
       interval: 10s
@@ -88,3 +91,5 @@ volumes:
 networks:
   aseguradora_net:
     driver: bridge
+  medicitas_shared_net:
+    external: true

@@ -91,6 +91,21 @@ class AseguradosRepository {
       conn.release();
     }
   }
+
+  async obtenerPorPoliza(numeroPoliza) {
+    const [rows] = await pool.execute(
+      `SELECT * FROM polizas WHERE numero_poliza = ? LIMIT 1`,
+      [numeroPoliza]
+    );
+    return rows[0] || null;
+  }
+
+  async actualizarEstadoPoliza(numeroPoliza, nuevoEstado) {
+    await pool.execute(
+      `UPDATE polizas SET estado = ? WHERE numero_poliza = ?`,
+      [nuevoEstado, numeroPoliza]
+    );
+  }
 }
 
 module.exports = AseguradosRepository;

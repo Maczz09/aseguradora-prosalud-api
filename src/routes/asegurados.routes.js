@@ -205,4 +205,42 @@ router.post(
   controller.crear,
 );
 
+/**
+ * @swagger
+ * /asegurados/poliza/{numeroPoliza}/estado:
+ *   patch:
+ *     summary: Actualiza manualmente el estado de una póliza (Dispara Webhook)
+ *     description: Permite cambiar el estado de VIGENTE a SUSPENDIDA o VENCIDA.
+ *     tags: [Asegurados]
+ *     security:
+ *       - ApiKeyAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: numeroPoliza
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [estado]
+ *             properties:
+ *               estado: { type: string, enum: [VIGENTE, VENCIDA, SUSPENDIDA] }
+ *     responses:
+ *       200:
+ *         description: Estado actualizado
+ *       400:
+ *         description: Estado inválido
+ *       404:
+ *         description: Póliza no encontrada
+ */
+router.patch(
+  '/poliza/:numeroPoliza/estado',
+  apiKeyMiddleware,
+  controller.actualizarEstado.bind(controller) // El binding es necesario si no se hizo en el constructor
+);
+
 module.exports = router;

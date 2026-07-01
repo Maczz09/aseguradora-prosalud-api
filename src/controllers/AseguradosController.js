@@ -147,6 +147,59 @@ class AseguradosController {
       next(err);
     }
   }
+  /**
+   * PATCH /api/v1/asegurados/poliza/:numeroPoliza/estado
+   */
+  async actualizarEstado(req, res, next) {
+    try {
+      const { numeroPoliza } = req.params;
+      const { estado } = req.body;
+
+      if (!estado || !ESTADOS_VALIDOS.includes(estado.toUpperCase())) {
+        return res.status(400).json({
+          codigo: 'PARAMETROS_INVALIDOS',
+          mensaje: `estado debe ser uno de: ${ESTADOS_VALIDOS.join(', ')}.`
+        });
+      }
+
+      // Buscar póliza y asegurado
+      const poliza = await this.validacionService.repo.obtenerPorPoliza(numeroPoliza);
+      if (!poliza) {
+        return res.status(404).json({
+          codigo: 'POLIZA_NO_ENCONTRADA',
+          mensaje: `No existe la póliza ${numeroPoliza}.`
+        });
+      }
+
+      const estadoAnterior = poliza.estado;
+      const nuevoEstado = estado.toUpperCase();
+
+      if (estadoAnterior === nuevoEstado) {
+        return res.status(200).json({ mensaje: 'La póliza ya se encuentra en ese estado.' });
+      }
+
+      // Actualizar en base de datos
+      await this.validacionService.repo.actualizarEstadoPoliza(numeroPoliza, nuevoEstado);
+
+      // Despachar webhook
+      const webhookService = require('../services/WebhookService');
+      // No esperamos a que responda el webhook (fire-and-forget o background async)
+      webhookService.enviarActualizacionPoliza({
+        numeroPoliza,
+        estadoAnterior,
+        nuevoEstado
+      });
+
+      return res.status(200).json({
+        mensaje: 'Estado actualizado correctamente',
+        numeroPoliza,
+        estadoAnterior,
+        nuevoEstado
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
 }
 
 module.exports = AseguradosController;
