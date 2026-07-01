@@ -31,7 +31,19 @@ app.get('/api-docs.json', (req, res) => res.json(swaggerSpec));
 // ── Rutas ──────────────────────────────────────────────────────────────────────
 app.use('/api/v1/asegurados', aseguradosRoutes);
 
-// ── Health check ───────────────────────────────────────────────────────────────
+// 🚀 Health check ─────────────────────────────────────────────────────────────
+/**
+ * @swagger
+ * /health:
+ *   get:
+ *     summary: Healthcheck del sistema
+ *     description: Endpoint para verificar que el servicio está vivo y responde. Usado por balanceadores de carga y el autoheal.
+ *     tags:
+ *       - Infraestructura
+ *     responses:
+ *       200:
+ *         description: El servicio está operando correctamente
+ */
 app.get('/health', (req, res) => res.json({ status: 'ok', servicio: 'aseguradora-prosalud-api' }));
 
 // ── Ruta no encontrada ─────────────────────────────────────────────────────────

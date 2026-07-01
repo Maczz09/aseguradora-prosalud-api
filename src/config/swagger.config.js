@@ -35,7 +35,7 @@ const opciones = {
       },
     ],
   },
-  apis: ['./src/routes/*.routes.js'],
+  apis: ['./src/app.js', './src/routes/*.routes.js'],
 };
 
 module.exports = swaggerJsdoc(opciones);
