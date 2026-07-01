@@ -84,6 +84,15 @@ services:
       timeout: 10s
       retries: 5
 
+  autoheal:
+    image: willfarrell/autoheal
+    container_name: aseguradora_autoheal
+    restart: always
+    environment:
+      - AUTOHEAL_CONTAINER_LABEL=all
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+
 volumes:
   aseguradora_mysql_data:
   aseguradora_rabbitmq_data:
