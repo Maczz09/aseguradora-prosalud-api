@@ -1,12 +1,16 @@
 'use strict';
 
+const logger = require('../config/logger');
+
 const axios = require('axios');
 const axiosRetry = require('axios-retry').default;
 
 class WebhookService {
   constructor() {
     this.webhookUrl = process.env.WEBHOOK_MEDICITAS_URL;
-    this.apiKey = process.env.API_KEY || 'test-api-key-12345'; // Llave para autenticarse con el backend médico
+    // Secreto compartido bidireccional: la misma ASEGURADORA_API_KEY que
+    // MediCitas usa para llamarnos autentica nuestros webhooks hacia MediCitas.
+    this.apiKey = process.env.ASEGURADORA_API_KEY;
 
     this.client = axios.create({
       timeout: 5000,
@@ -24,8 +28,12 @@ class WebhookService {
 
   async enviarActualizacionPoliza({ numeroPoliza, estadoAnterior, nuevoEstado }) {
     if (!this.webhookUrl) {
-      console.warn('[WebhookService] WEBHOOK_MEDICITAS_URL no está configurada. Omitiendo notificación.');
+      logger.warn('[WebhookService] WEBHOOK_MEDICITAS_URL no está configurada. Omitiendo notificación.');
       return;
+    }
+    if (!this.apiKey) {
+      logger.error('[WebhookService] ASEGURADORA_API_KEY no configurada — webhook omitido');
+      return false;
     }
 
     const payload = {
@@ -36,19 +44,19 @@ class WebhookService {
     };
 
     try {
-      console.log(`[WebhookService] Enviando actualización de póliza ${numeroPoliza} a ${this.webhookUrl}`);
+      logger.info(`[WebhookService] Enviando actualización de póliza ${numeroPoliza} a ${this.webhookUrl}`);
       
       const response = await this.client.post(this.webhookUrl, payload, {
         headers: {
-          'x-api-key': this.apiKey,
+          'X-Webhook-Api-Key': this.apiKey,
           'Content-Type': 'application/json'
         }
       });
 
-      console.log(`[WebhookService] Webhook entregado con éxito (Status: ${response.status})`);
+      logger.info(`[WebhookService] Webhook entregado con éxito (Status: ${response.status})`);
       return true;
     } catch (error) {
-      console.error(
+      logger.error(
         `[WebhookService] Error crítico entregando webhook tras reintentos a ${this.webhookUrl}:`,
         error.message
       );

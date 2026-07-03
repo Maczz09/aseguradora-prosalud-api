@@ -1,5 +1,7 @@
 'use strict';
 
+const logger = require('./config/logger');
+
 require('dotenv').config();
 
 const express        = require('express');
@@ -54,7 +56,7 @@ app.use((req, res) => {
 // ── Error middleware global ────────────────────────────────────────────────────
 // eslint-disable-next-line no-unused-vars
 app.use((err, req, res, next) => {
-  console.error('[ERROR]', err.message, err.stack);
+  logger.error('[ERROR]', err.message, err.stack);
   res.status(500).json({
     codigo:  'ERROR_INTERNO_ASEGURADORA',
     mensaje: 'Error interno del servidor. Intente nuevamente.',

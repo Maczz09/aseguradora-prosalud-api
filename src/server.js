@@ -1,5 +1,11 @@
 'use strict';
 
+// DEBE ser el primer require: instala los hooks de auto-instrumentación antes
+// de que cualquier módulo (express, http, mysql2, amqplib) sea cargado por primera vez.
+require('./tracing');
+
+const logger = require('./config/logger');
+
 require('dotenv').config();
 
 const app                    = require('./app');
@@ -16,9 +22,9 @@ async function arrancar() {
     const conn = await pool.getConnection();
     await conn.ping();
     conn.release();
-    console.log('[DB] Conectado a db_aseguradora correctamente.');
+    logger.info('[DB] Conectado a db_aseguradora correctamente.');
   } catch (err) {
-    console.error('[DB] No se pudo conectar a MySQL:', err.message);
+    logger.error('[DB] No se pudo conectar a MySQL:', err.message);
     process.exit(1);
   }
 
@@ -26,10 +32,10 @@ async function arrancar() {
   try {
     await conectar();
   } catch (err) {
-    console.error('[RABBITMQ] No se pudo conectar:', err.message);
+    logger.error('[RABBITMQ] No se pudo conectar:', err.message);
     // RabbitMQ es opcional para el inicio — el outbox fallará silenciosamente
     // si no está disponible, pero el endpoint HTTP seguirá respondiendo.
-    console.warn('[RABBITMQ] Continuando sin RabbitMQ — los eventos quedarán en outbox.');
+    logger.warn('[RABBITMQ] Continuando sin RabbitMQ — los eventos quedarán en outbox.');
   }
 
   // ── 3. Iniciar workers ─────────────────────────────────────────────────────
@@ -38,18 +44,18 @@ async function arrancar() {
   try {
     await iniciarConsumerAuditoria();
   } catch (err) {
-    console.warn('[AUDITORIA_CONSUMER] No se pudo iniciar el consumer:', err.message);
+    logger.warn('[AUDITORIA_CONSUMER] No se pudo iniciar el consumer:', err.message);
   }
 
   // ── 4. Levantar servidor HTTP ──────────────────────────────────────────────
   app.listen(PORT, () => {
-    console.log(`[SERVER] Aseguradora ProSalud API corriendo en puerto ${PORT}`);
-    console.log(`[SERVER] Swagger UI: http://localhost:${PORT}/api-docs`);
-    console.log(`[SERVER] Health:     http://localhost:${PORT}/health`);
+    logger.info(`[SERVER] Aseguradora ProSalud API corriendo en puerto ${PORT}`);
+    logger.info(`[SERVER] Swagger UI: http://localhost:${PORT}/api-docs`);
+    logger.info(`[SERVER] Health:     http://localhost:${PORT}/health`);
   });
 }
 
 arrancar().catch((err) => {
-  console.error('[SERVER] Error fatal al arrancar:', err);
+  logger.error('[SERVER] Error fatal al arrancar:', err);
   process.exit(1);
 });

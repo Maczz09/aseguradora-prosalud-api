@@ -1,5 +1,7 @@
 'use strict';
 
+const logger = require('../config/logger');
+
 const { randomUUID } = require('crypto');
 const pool           = require('../config/database');
 const { getChannel, QUEUES } = require('../config/rabbitmq');
@@ -29,7 +31,7 @@ async function iniciarConsumerAuditoria() {
     try {
       evento = JSON.parse(msg.content.toString());
     } catch (err) {
-      console.error('[AUDITORIA_CONSUMER] Mensaje con JSON inválido:', msg.content.toString());
+      logger.error('[AUDITORIA_CONSUMER] Mensaje con JSON inválido:', msg.content.toString());
       channel.nack(msg, false, false); // descartar, va a DLQ
       return;
     }
@@ -53,15 +55,15 @@ async function iniciarConsumerAuditoria() {
       );
 
       channel.ack(msg);
-      console.log(`[AUDITORIA_CONSUMER] Auditoria registrada: ${resultado} — ${tipoDocumento}:${numeroDocumento}`);
+      logger.info(`[AUDITORIA_CONSUMER] Auditoria registrada: ${resultado} — ${tipoDocumento}:${numeroDocumento}`);
     } catch (err) {
-      console.error('[AUDITORIA_CONSUMER] Error insertando historial:', err.message);
+      logger.error('[AUDITORIA_CONSUMER] Error insertando historial:', err.message);
       // nack sin requeue — el mensaje irá a la DLQ para revisión
       channel.nack(msg, false, false);
     }
   });
 
-  console.log(`[AUDITORIA_CONSUMER] Escuchando en cola: ${QUEUE}`);
+  logger.info(`[AUDITORIA_CONSUMER] Escuchando en cola: ${QUEUE}`);
 }
 
 module.exports = { iniciarConsumerAuditoria };

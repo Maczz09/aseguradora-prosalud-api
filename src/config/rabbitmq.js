@@ -1,4 +1,6 @@
 'use strict';
+
+const logger = require('./logger');
 require('dotenv').config();
 
 const amqplib = require('amqplib');
@@ -19,7 +21,7 @@ const QUEUES   = {
 async function conectar(maxRetries = 10, delayMs = 3000) {
   for (let intento = 1; intento <= maxRetries; intento++) {
     try {
-      console.log(`[RABBITMQ] Conectando... (intento ${intento}/${maxRetries})`);
+      logger.info(`[RABBITMQ] Conectando... (intento ${intento}/${maxRetries})`);
 
       connection = await amqplib.connect(process.env.RABBITMQ_URL || 'amqp://localhost');
       channel    = await connection.createChannel();
@@ -39,13 +41,13 @@ async function conectar(maxRetries = 10, delayMs = 3000) {
 
       await channel.bindQueue(QUEUES.auditoria, EXCHANGE, '#');
 
-      connection.on('error',  (err) => console.error('[RABBITMQ] Error de conexión:', err.message));
-      connection.on('close',  ()    => console.warn('[RABBITMQ] Conexión cerrada.'));
+      connection.on('error',  (err) => logger.error('[RABBITMQ] Error de conexión:', err.message));
+      connection.on('close',  ()    => logger.warn('[RABBITMQ] Conexión cerrada.'));
 
-      console.log('[RABBITMQ] Conectado y topología declarada correctamente.');
+      logger.info('[RABBITMQ] Conectado y topología declarada correctamente.');
       return channel;
     } catch (err) {
-      console.error(`[RABBITMQ] Fallo en intento ${intento}:`, err.message);
+      logger.error(`[RABBITMQ] Fallo en intento ${intento}:`, err.message);
       if (intento === maxRetries) throw err;
       await new Promise(resolve => setTimeout(resolve, delayMs));
     }

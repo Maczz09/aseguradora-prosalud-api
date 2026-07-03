@@ -1,5 +1,7 @@
 'use strict';
 
+const logger = require('../config/logger');
+
 /**
  * OutboxWorker — publica eventos pendientes a RabbitMQ cada 10 segundos.
  *
@@ -27,7 +29,7 @@ async function procesarOutbox() {
     channel = getChannel();
   } catch {
     // RabbitMQ aún no está conectado — se reintentará en el próximo ciclo
-    console.warn('[OUTBOX_WORKER] Canal RabbitMQ no disponible aún, se reintentará.');
+    logger.warn('[OUTBOX_WORKER] Canal RabbitMQ no disponible aún, se reintentará.');
     return;
   }
 
@@ -43,7 +45,7 @@ async function procesarOutbox() {
 
   if (eventos.length === 0) return;
 
-  console.log(`[OUTBOX_WORKER] Procesando ${eventos.length} evento(s) pendiente(s).`);
+  logger.info(`[OUTBOX_WORKER] Procesando ${eventos.length} evento(s) pendiente(s).`);
 
   for (const ev of eventos) {
     try {
@@ -62,7 +64,7 @@ async function procesarOutbox() {
         [ev.id],
       );
     } catch (err) {
-      console.error(`[OUTBOX_WORKER] Error publicando evento ${ev.id}:`, err.message);
+      logger.error(`[OUTBOX_WORKER] Error publicando evento ${ev.id}:`, err.message);
       await pool.execute(
         'UPDATE outbox SET intentos = intentos + 1 WHERE id = ?',
         [ev.id],
@@ -77,11 +79,11 @@ function iniciarOutboxWorker() {
     try {
       await procesarOutbox();
     } catch (err) {
-      console.error('[OUTBOX_WORKER] Error inesperado:', err.message);
+      logger.error('[OUTBOX_WORKER] Error inesperado:', err.message);
     }
   });
 
-  console.log('[OUTBOX_WORKER] Iniciado — polling cada 10 segundos.');
+  logger.info('[OUTBOX_WORKER] Iniciado — polling cada 10 segundos.');
 }
 
 module.exports = { iniciarOutboxWorker };
