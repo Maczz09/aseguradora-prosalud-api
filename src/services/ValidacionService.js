@@ -2,6 +2,7 @@
 
 const { randomUUID } = require('crypto');
 const Poliza = require('../domain/Poliza');
+const { validacionesCoberturaCounter } = require('../config/metrics');
 
 class ValidacionService {
   /**
@@ -34,6 +35,8 @@ class ValidacionService {
 
     const poliza  = polizaRow ? new Poliza(polizaRow) : null;
     const vigente = poliza && poliza.estaVigente();
+
+    validacionesCoberturaCounter.inc({ resultado: vigente ? 'aprobada' : 'rechazada' });
 
     // ── Auditoría asíncrona: INSERT en outbox (rápido, no bloquea) ──────────
     // El OutboxWorker leerá esto y publicará a RabbitMQ en segundo plano.

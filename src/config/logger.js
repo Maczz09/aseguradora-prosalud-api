@@ -13,6 +13,7 @@
  */
 
 const pino = require('pino');
+const asyncContext = require('./asyncContext');
 
 // CRÍTICO: si Loki se cae, el log no debe depender exclusivamente de él — con
 // un solo target, un lote fallido se pierde en silencio y esas líneas jamás
@@ -40,10 +41,22 @@ const transport = process.env.LOKI_HOST
 const pinoLogger = pino(
   {
     level: process.env.LOG_LEVEL || 'info',
-    formatters: { level: (label) => ({ level: label.toUpperCase() }) },
+    // NUNCA usar formatters.level con pino.transport({ targets: [...] }):
+    // el filtrado por nivel de cada target compara el nivel NUMÉRICO
+    // original — si formatters.level lo reescribe a string ('INFO') antes
+    // del despacho a los worker threads, la comparación falla en silencio y
+    // CADA mensaje se descarta sin ningún error visible en ningún target.
+    //
     // pino-loki requiere `time` numérico (epoch ms); con isoTime genera NaN
     // y Loki rechaza los lotes completos.
     timestamp: process.env.LOKI_HOST ? pino.stdTimeFunctions.epochTime : pino.stdTimeFunctions.isoTime,
+    // Inyecta correlationId automáticamente en CADA log emitido dentro del
+    // contexto de una petición HTTP (ver correlationId.middleware.js), sin
+    // tener que pasarlo manualmente en cada llamada a logger.info/error/etc.
+    mixin() {
+      const store = asyncContext.getStore();
+      return { correlationId: store ? store.get('correlationId') : undefined };
+    },
   },
   transport,
 );

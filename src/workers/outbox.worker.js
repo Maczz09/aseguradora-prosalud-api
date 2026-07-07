@@ -33,14 +33,17 @@ async function procesarOutbox() {
     return;
   }
 
+  // mysql2 rechaza LIMIT como placeholder preparado ("Incorrect arguments to
+  // mysqld_stmt_execute") — BATCH_SIZE es una constante interna (no input de
+  // usuario), por lo que inlinearla es seguro.
   const [eventos] = await pool.execute(
     `SELECT id, evento, payload
        FROM outbox
       WHERE publicado = 0
         AND intentos  < ?
       ORDER BY created_at ASC
-      LIMIT ?`,
-    [MAX_INTENTOS, BATCH_SIZE],
+      LIMIT ${BATCH_SIZE}`,
+    [MAX_INTENTOS],
   );
 
   if (eventos.length === 0) return;

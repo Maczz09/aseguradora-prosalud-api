@@ -1,6 +1,7 @@
 'use strict';
 
 const { randomUUID } = require('crypto');
+const { aseguradosRegistradosCounter } = require('../config/metrics');
 
 /**
  * Servicio de registro de asegurados.
@@ -53,6 +54,7 @@ class RegistroService {
     };
 
     await this.repo.crearAseguradoConPoliza(asegurado, poliza);
+    aseguradosRegistradosCounter.inc();
 
     return {
       idAsegurado:     asegurado.id,

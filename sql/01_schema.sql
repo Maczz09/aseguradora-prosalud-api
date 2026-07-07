@@ -52,6 +52,28 @@ CREATE TABLE IF NOT EXISTS outbox (
   INDEX idx_publicado (publicado, created_at)
 );
 
+-- ── Tabla: webhooks_salientes (outbox local para entrega a MediCitas) ─────────
+-- Si la entrega inmediata (con reintento en memoria) falla, el evento se
+-- persiste aquí para que un worker en background siga reintentando con
+-- backoff hasta que MediCitas vuelva a estar disponible — sin esto, un
+-- webhook fallido se pierde para siempre y los dos sistemas quedan
+-- desincronizados (ej. póliza SUSPENDIDA aquí pero VIGENTE en MediCitas).
+CREATE TABLE IF NOT EXISTS webhooks_salientes (
+  id                  VARCHAR(36)  NOT NULL DEFAULT (UUID()),
+  tipo_evento         VARCHAR(60)  NOT NULL,
+  payload             JSON         NOT NULL,
+  url_destino         VARCHAR(255) NOT NULL,
+  estado              ENUM('PENDIENTE','ENTREGADO','FALLIDO_PERMANENTE') NOT NULL DEFAULT 'PENDIENTE',
+  intentos            INT          NOT NULL DEFAULT 0,
+  proximo_intento_en  TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  ultimo_error        VARCHAR(500) NULL,
+  created_at          TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at          TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+  PRIMARY KEY (id),
+  INDEX idx_estado_proximo (estado, proximo_intento_en)
+);
+
 -- ── Tabla: historial_validaciones (log de auditoría — alimentado async) ───────
 CREATE TABLE IF NOT EXISTS historial_validaciones (
   id                   VARCHAR(36)  NOT NULL DEFAULT (UUID()),

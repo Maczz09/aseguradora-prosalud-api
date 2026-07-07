@@ -10,12 +10,18 @@ const cors           = require('cors');
 const swaggerUi      = require('swagger-ui-express');
 const swaggerSpec    = require('./config/swagger.config');
 const aseguradosRoutes = require('./routes/asegurados.routes');
+const { correlationIdMiddleware } = require('./middleware/correlationId.middleware');
+const { errorHandler } = require('./middleware/errorHandler.middleware');
+const { metricsMiddleware } = require('./middleware/metrics.middleware');
+const { register } = require('./config/metrics');
 
 const app = express();
 
 // ── Seguridad y utilidades ─────────────────────────────────────────────────────
 app.use(helmet());
 app.use(cors());
+app.use(metricsMiddleware);
+app.use(correlationIdMiddleware);
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
@@ -48,19 +54,28 @@ app.use('/api/v1/asegurados', aseguradosRoutes);
  */
 app.get('/health', (req, res) => res.json({ status: 'ok', servicio: 'aseguradora-prosalud-api' }));
 
+// Endpoint de métricas para Prometheus (scrape interno, sin autenticación
+// como el resto del stack — no expone datos de negocio, solo agregados).
+app.get('/metrics', async (req, res) => {
+  try {
+    res.set('Content-Type', register.contentType);
+    res.end(await register.metrics());
+  } catch (err) {
+    res.status(500).end(err.message);
+  }
+});
+
 // ── Ruta no encontrada ─────────────────────────────────────────────────────────
 app.use((req, res) => {
-  res.status(404).json({ codigo: 'RUTA_NO_ENCONTRADA', mensaje: `${req.method} ${req.path} no existe.` });
+  res.status(404).json({
+    codigo: 'RUTA_NO_ENCONTRADA',
+    mensaje: `${req.method} ${req.path} no existe.`,
+    correlationId: req.correlationId || null,
+    timestamp: new Date().toISOString(),
+  });
 });
 
 // ── Error middleware global ────────────────────────────────────────────────────
-// eslint-disable-next-line no-unused-vars
-app.use((err, req, res, next) => {
-  logger.error('[ERROR]', err.message, err.stack);
-  res.status(500).json({
-    codigo:  'ERROR_INTERNO_ASEGURADORA',
-    mensaje: 'Error interno del servidor. Intente nuevamente.',
-  });
-});
+app.use(errorHandler);
 
 module.exports = app;

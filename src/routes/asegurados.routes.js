@@ -4,6 +4,8 @@ const express = require('express');
 
 const backpressureMiddleware = require('../middleware/backpressure.middleware');
 const apiKeyMiddleware       = require('../middleware/apiKey.middleware');
+const { validate }           = require('../middleware/validate.middleware');
+const { validarQuerySchema, crearAseguradoSchema, actualizarEstadoSchema } = require('../schemas/asegurados.schemas');
 const AseguradosController   = require('../controllers/AseguradosController');
 const ValidacionService      = require('../services/ValidacionService');
 const RegistroService        = require('../services/RegistroService');
@@ -144,6 +146,7 @@ router.get(
   '/validar',
   backpressureMiddleware,
   apiKeyMiddleware,
+  validate(validarQuerySchema, 'query'),
   controller.validar,
 );
 
@@ -202,6 +205,7 @@ router.post(
   '/',
   backpressureMiddleware,
   apiKeyMiddleware,
+  validate(crearAseguradoSchema),
   controller.crear,
 );
 
@@ -240,6 +244,7 @@ router.post(
 router.patch(
   '/poliza/:numeroPoliza/estado',
   apiKeyMiddleware,
+  validate(actualizarEstadoSchema),
   controller.actualizarEstado.bind(controller) // El binding es necesario si no se hizo en el constructor
 );
 

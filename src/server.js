@@ -13,6 +13,9 @@ const pool                   = require('./config/database');
 const { conectar }           = require('./config/rabbitmq');
 const { iniciarOutboxWorker }     = require('./workers/outbox.worker');
 const { iniciarConsumerAuditoria } = require('./workers/auditoriaLocal.consumer');
+const { iniciarWorkerWebhooksSalientes } = require('./workers/webhooksSalientes.worker');
+const WebhooksSalientesRepository = require('./repositories/WebhooksSalientesRepository');
+const webhookService = require('./services/WebhookService');
 
 const PORT = parseInt(process.env.PORT || '4001');
 
@@ -40,6 +43,10 @@ async function arrancar() {
 
   // ── 3. Iniciar workers ─────────────────────────────────────────────────────
   iniciarOutboxWorker();
+
+  const webhooksSalientesRepository = new WebhooksSalientesRepository();
+  webhookService.init(webhooksSalientesRepository);
+  iniciarWorkerWebhooksSalientes(webhooksSalientesRepository);
 
   try {
     await iniciarConsumerAuditoria();
