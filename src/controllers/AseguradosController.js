@@ -17,7 +17,7 @@ class AseguradosController {
   }
 
   /**
-   * GET /api/v1/asegurados/validar?tipoDocumento=DNI&numeroDocumento=12345678
+   * GET /api/v2/asegurados/validar?tipoDocumento=DNI&numeroDocumento=12345678
    *
    * Respuestas:
    *   200 — { asegurado: true,  numeroPoliza, plan, porcentajeCobertura, vigencia }
@@ -39,7 +39,7 @@ class AseguradosController {
   }
 
   /**
-   * POST /api/v1/asegurados
+   * POST /api/v2/asegurados
    *
    * Crea un asegurado y su póliza (con porcentaje de cobertura) en una sola
    * operación. Campos obligatorios: nombre, apellido, tipoDocumento,
@@ -67,7 +67,7 @@ class AseguradosController {
     }
   }
   /**
-   * PATCH /api/v1/asegurados/poliza/:numeroPoliza/estado
+   * PATCH /api/v2/asegurados/poliza/:numeroPoliza/estado
    */
   async actualizarEstado(req, res, next) {
     try {

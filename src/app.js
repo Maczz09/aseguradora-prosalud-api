@@ -37,7 +37,7 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
 app.get('/api-docs.json', (req, res) => res.json(swaggerSpec));
 
 // ── Rutas ──────────────────────────────────────────────────────────────────────
-app.use('/api/v1/asegurados', aseguradosRoutes);
+app.use('/api/v2/asegurados', aseguradosRoutes);
 
 // 🚀 Health check ─────────────────────────────────────────────────────────────
 /**

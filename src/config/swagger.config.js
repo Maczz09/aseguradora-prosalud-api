@@ -15,7 +15,7 @@ const opciones = {
       },
     },
     servers: [
-      { url: '/api/v1', description: 'Servidor API v1' },
+      { url: '/api/v2', description: 'Servidor API v2' },
     ],
     components: {
       securitySchemes: {
