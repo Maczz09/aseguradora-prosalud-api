@@ -10,7 +10,7 @@ const pool = mysql.createPool({
   password:        process.env.DB_PASSWORD || '',
   database:        process.env.DB_NAME     || 'db_aseguradora',
   waitForConnections: true,
-  connectionLimit: 10,
+  connectionLimit: parseInt(process.env.DB_POOL_SIZE || '10', 10),
   queueLimit:      0,
   timezone:        '+00:00',
 });
